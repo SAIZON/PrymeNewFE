@@ -68,38 +68,45 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   // 2. Fetch Live Data from Java Backend
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch Live Leads from Java
-      const apps = await PrymeAPI.getApplications();
-      setApplications(apps);
+    const fetchDashboardData = async () => {
+        try {
+            const response = await PrymeAPI.getApplications();
 
-      // Calculate real stats from the database
-      const pendingCount = apps.filter((a: any) => a.status === 'SUBMITTED' || a.status === 'PENDING').length;
-      const approvedCount = apps.filter((a: any) => a.status === 'APPROVED' || a.status === 'DISBURSED').length;
-      const totalVolume = apps.reduce((sum: number, app: any) => sum + (app.requestedAmount || 0), 0);
+            // Extract the array from Spring Boot's Page wrapper (response.content)
+            const apps = response.content || response || [];
+            setApplications(apps);
 
-      setStats(prev => ({
-        ...prev,
-        pendingApplications: pendingCount,
-        approvedLoans: approvedCount,
-        totalDisbursed: totalVolume,
-      }));
+            const pendingCount = apps.filter((a: any) => a.status === 'SUBMITTED' || a.status === 'PENDING').length;
+            const approvedCount = apps.filter((a: any) => a.status === 'APPROVED' || a.status === 'DISBURSED').length;
+            const totalVolume = apps.reduce((sum: number, app: any) => sum + (app.requestedAmount || 0), 0);
 
-      // DEMO MOCK: Since Java IAM GET Users isn't built yet, we mock it to preserve UI
-      setUsers([
-        { id: "1", email: "admin@pryme.com", full_name: "Super Admin", created_at: new Date().toISOString(), role: "SUPER_ADMIN" }
-      ]);
-      setStats(prev => ({ ...prev, totalUsers: 1 }));
+            setStats({
+                totalUsers: 1, // Still mocked for now
+                pendingApplications: pendingCount,
+                approvedLoans: approvedCount,
+                totalDisbursed: totalVolume,
+            });
 
-    } catch (error) {
-      toast({
-        title: "Connection Error",
-        description: "Failed to fetch live data from the secure server.",
-        variant: "destructive"
-      });
-    }
-  };
+            setIsLoading(false);
+        } catch (error) {
+            toast({
+                title: "Connection Error",
+                description: "Failed to fetch live data from the secure server.",
+                variant: "destructive"
+            });
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdateStatus = async (id: number, newStatus: string) => {
+        try {
+            await PrymeAPI.updateApplicationStatus(id, newStatus);
+            toast({ title: "Status Updated", description: `Application is now ${newStatus}` });
+            fetchDashboardData(); // Refresh the list
+        } catch (error) {
+            toast({ title: "Update Failed", variant: "destructive" });
+        }
+    };
 
   const handleSignOut = () => {
     localStorage.removeItem("pryme_token");

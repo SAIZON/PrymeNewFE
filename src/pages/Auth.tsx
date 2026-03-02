@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Lock, User, ArrowRight, Building2, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Building2, ArrowLeft,Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +18,14 @@ const loginSchema = z.object({
 });
 
 const signupSchema = loginSchema.extend({
-  fullName: z.string().min(2, "Name must be at least 2 characters"),
-  confirmPassword: z.string(),
+    fullName: z.string().min(2, "Name must be at least 2 characters"),
+    mobile: z.string().min(10, "Please enter a valid mobile number"), // Added mobile
+    confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
 });
+
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -62,52 +64,67 @@ const Auth = () => {
       navigate("/dashboard"); // Or /admin-dashboard depending on your setup
     }
   }, [navigate]);
+    const handleLogin = async (data: LoginData) => {
+        setIsLoading(true);
 
-  const handleLogin = async (data: LoginData) => {
-    setIsLoading(true);
-    
-    try {
-      // Calling your Java Spring Boot Backend
-      const response = await PrymeAPI.login(data.email, data.password);
-      
-      // Store the secure token and role
-      localStorage.setItem("pryme_token", response.token);
-      localStorage.setItem("pryme_role", response.role);
-      localStorage.setItem("pryme_name", response.name);
+        try {
+            // Calling your Java Spring Boot Backend using the form data
+            const response = await PrymeAPI.login(data.email, data.password);
 
-      toast({
-        title: "Welcome back!",
-        description: response.message || "You have successfully logged in.",
-      });
-      
-      navigate("/admin-dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Login Failed",
-        description: error.message || "Invalid email or password",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+            // Accessing the nested 'user' object and 'accessToken' to match AuthResponse.java
+            localStorage.setItem("pryme_token", response.accessToken);
+            localStorage.setItem("pryme_role", response.user.role);
+            localStorage.setItem("pryme_name", response.user.name);
 
-  const handleSignup = async (data: SignupData) => {
-    setIsLoading(true);
-    
-    // DEMO MOCK: Since we only built the Login API in Java tonight, 
-    // we simulate a successful signup so the UI doesn't break during the showcase.
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account Created!",
-        description: "Welcome to PRYME Consulting. Please login with your new credentials.",
-      });
-      setView("login");
-      loginForm.setValue("email", data.email);
-    }, 1500);
-  };
+            toast({
+                title: "Welcome back!",
+                description: "You have successfully logged in.",
+            });
 
+            // Redirecting based on role is usually a good idea, but here we redirect to dashboard
+            if (response.user.role === "ADMIN") {
+                window.location.href = "/admin";
+            } else {
+                window.location.href = "/dashboard";
+            }
+
+        } catch (error: any) {
+            toast({
+                title: "Login Failed",
+                description: error.message || "Invalid email or password",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSignup = async (data: SignupData) => {
+        setIsLoading(true);
+
+        try {
+            // Mapping frontend schema to backend RegisterRequest DTO
+            await PrymeAPI.register(data.fullName, data.email, data.mobile, data.password);
+
+            toast({
+                title: "Account Created!",
+                description: "Welcome! Please login with your new credentials.",
+            });
+
+            // Switch view back to login and pre-fill the email
+            setView("login");
+            loginForm.setValue("email", data.email);
+
+        } catch (error: any) {
+            toast({
+                title: "Registration Failed",
+                description: error.message || "Could not create account",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
   const handleForgotPassword = async (data: ForgotPasswordData) => {
     setIsLoading(true);
     
@@ -358,7 +375,21 @@ const Auth = () => {
                           <p className="text-xs text-destructive">{signupForm.formState.errors.fullName.message}</p>
                         )}
                       </div>
-
+                        <div className="space-y-2">
+                            <Label className="text-sm font-medium text-foreground">Mobile Number</Label>
+                            <div className="relative">
+                                <Input
+                                    type="tel"
+                                    placeholder="1234567890"
+                                    className="neo-input border-0 pl-10"
+                                    {...signupForm.register("mobile")}
+                                />
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            </div>
+                            {signupForm.formState.errors.mobile && (
+                                <p className="text-xs text-destructive">{signupForm.formState.errors.mobile.message}</p>
+                            )}
+                        </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-foreground">Email</Label>
                         <div className="relative">
