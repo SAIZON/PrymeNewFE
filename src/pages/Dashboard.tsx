@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { PrymeAPI } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import DocumentUploader from "@/components/loan/DocumentUploader.tsx";
+import DocumentUploader from "@/components/loan/DocumentUploader"; // Assuming you added this!
 
 const springConfig = { stiffness: 120, damping: 28, mass: 0.8 };
 
@@ -22,6 +22,9 @@ const Dashboard = () => {
     const [stats, setStats] = useState<any>(null);
     const [applications, setApplications] = useState<any[]>([]);
     const [isDataLoading, setIsDataLoading] = useState(true);
+
+    // NEW: State to track which application is currently selected
+    const [selectedAppIndex, setSelectedAppIndex] = useState(0);
 
     useEffect(() => {
         if (!isAuthLoading && !user) {
@@ -46,44 +49,51 @@ const Dashboard = () => {
         }
     };
 
-    // Static timeline stages (You can map these to currentApp.status later)
-    const stages = [
-        {
-            id: 1,
-            title: "Application Received",
-            description: "Your application has been submitted successfully",
-            icon: FileText,
-            status: "completed",
-        },
-        {
-            id: 2,
-            title: "Document Verification",
-            description: "Our team is verifying your documents",
-            icon: Search,
-            status: "current",
-        },
-        {
-            id: 3,
-            title: "Credit Assessment",
-            description: "Evaluating your credit profile",
-            icon: AlertCircle,
-            status: "pending",
-        },
-        {
-            id: 4,
-            title: "Approval",
-            description: "Final approval from our underwriting team",
-            icon: CheckCircle,
-            status: "pending",
-        },
-        {
-            id: 5,
-            title: "Disbursement",
-            description: "Funds transferred to your account",
-            icon: CreditCard,
-            status: "pending",
-        },
-    ];
+    const currentApp = applications.length > 0 ? applications[selectedAppIndex] : null;
+
+
+    // Dynamic Timeline Generator based on Java ApplicationStatus Enum
+    const getDynamicStages = (appStatus: string) => {
+        const flow = ["SUBMITTED", "VERIFIED", "PROCESSING", "APPROVED", "DISBURSED"];
+        const currentIndex = flow.indexOf(appStatus);
+        const isRejected = appStatus === "REJECTED";
+
+        const determineStatus = (stageIndex: number) => {
+            if (isRejected) {
+                // If rejected, mark the current active stage as error, and the rest as pending
+                return "error";
+            }
+            if (currentIndex > stageIndex) return "completed";
+            if (currentIndex === stageIndex) return "current";
+            return "pending";
+        };
+
+        return [
+            {
+                id: 1, title: "Application Received", description: "Your application has been submitted successfully", icon: FileText,
+                status: isRejected ? "completed" : determineStatus(0),
+            },
+            {
+                id: 2, title: "Document Verification", description: "Our team is verifying your documents", icon: Search,
+                status: isRejected ? "error" : determineStatus(1),
+            },
+            {
+                id: 3, title: "Credit Assessment", description: "Evaluating your credit profile (Processing)", icon: AlertCircle,
+                status: (isRejected && currentIndex < 2) ? "pending" : isRejected ? "error" : determineStatus(2),
+            },
+            {
+                id: 4, title: "Approval", description: "Final approval from our underwriting team", icon: CheckCircle,
+                status: (isRejected && currentIndex < 3) ? "pending" : isRejected ? "error" : determineStatus(3),
+            },
+            {
+                id: 5, title: "Disbursement", description: "Funds transferred to your account", icon: CreditCard,
+                status: (isRejected && currentIndex < 4) ? "pending" : isRejected ? "error" : determineStatus(4),
+            },
+        ];
+    };
+
+    // Generate the stages for the currently selected application
+    const stages = currentApp ? getDynamicStages(currentApp.status) : [];
 
     const getStageStyles = (status: string) => {
         switch (status) {
@@ -99,6 +109,11 @@ const Dashboard = () => {
                     line: "bg-border",
                     text: "text-primary",
                 };
+            case "error": // Added for REJECTED state
+                return { circle: "bg-destructive text-destructive-foreground",
+                    line: "bg-border", text:
+                        "text-destructive",
+                };
             default:
                 return {
                     circle: "bg-muted text-muted-foreground",
@@ -108,7 +123,6 @@ const Dashboard = () => {
         }
     };
 
-    // Consolidated Loading Screen
     if (isAuthLoading || isDataLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
@@ -117,8 +131,7 @@ const Dashboard = () => {
         );
     }
 
-    // Determine current active application
-    const currentApp = applications.length > 0 ? applications[0] : null;
+
 
     // Map backend stats to UI
     const quickStats = [
@@ -201,18 +214,42 @@ const Dashboard = () => {
                         <div className="container mx-auto px-4">
                             <div className="max-w-3xl mx-auto">
 
+                                {/* NEW: Application Switcher (Only visible if > 1 application) */}
+                                {applications.length > 1 && (
+                                    <div className="mb-6 flex flex-col gap-2">
+                                        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Select Application</span>
+                                        <div className="flex items-center gap-3 overflow-x-auto pb-2 hide-scrollbar">
+                                            {applications.map((app, index) => (
+                                                <button
+                                                    key={app.id}
+                                                    onClick={() => setSelectedAppIndex(index)}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border",
+                                                        selectedAppIndex === index
+                                                            ? "bg-primary text-primary-foreground border-primary shadow-md"
+                                                            : "bg-card border-border/50 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                                    )}
+                                                >
+                                                    PYR-{app.id} • {app.loanType}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Dynamic Application Card */}
                                 {currentApp ? (
                                     <motion.div
+                                        key={`card-${currentApp.id}`} // Force re-animation on tab switch
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ type: "spring", ...springConfig, delay: 0.3 }}
+                                        transition={{ type: "spring", ...springConfig }}
                                         className="bg-card/70 backdrop-blur-sm rounded-2xl border border-border/40 p-6 mb-8 hover:border-primary/15 transition-colors duration-300"
                                     >
                                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 pb-6 border-b border-border/50">
                                             <div>
                                                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Application ID</span>
-                                                <p className="text-lg font-mono font-semibold text-foreground">{currentApp.applicationId}</p>
+                                                <p className="text-lg font-mono font-semibold text-foreground">PYR-{currentApp.id}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
                          <span className={cn(
@@ -233,7 +270,7 @@ const Dashboard = () => {
                                             </div>
                                             <div>
                                                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Amount</span>
-                                                <p className="text-sm font-medium text-foreground mt-1">₹{currentApp.requestedAmount?.toLocaleString()}</p>
+                                                <p className="text-sm font-medium text-foreground mt-1">₹{currentApp.amount?.toLocaleString()}</p>
                                             </div>
                                             <div>
                                                 <span className="text-xs text-muted-foreground uppercase tracking-wider">CIBIL Score</span>
@@ -265,9 +302,10 @@ const Dashboard = () => {
                                 {/* Timeline */}
                                 {currentApp && (
                                     <motion.div
+                                        key={`timeline-${currentApp.id}`} // Force re-render on tab switch
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ type: "spring", ...springConfig, delay: 0.4 }}
+                                        transition={{ type: "spring", ...springConfig, delay: 0.1 }}
                                         className="bg-card/70 backdrop-blur-sm rounded-2xl border border-border/40 p-6"
                                     >
                                         <h2 className="text-lg font-semibold text-foreground mb-8">Application Progress</h2>
@@ -299,19 +337,21 @@ const Dashboard = () => {
                                         </div>
                                     </motion.div>
                                 )}
-                                {/* Inside Dashboard.tsx, right below the Timeline section */}
+
+                                {/* Documents Upload Section */}
                                 {currentApp && (
                                     <motion.div
+                                        key={`docs-${currentApp.id}`}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
+                                        transition={{ type: "spring", ...springConfig, delay: 0.2 }}
                                         className="bg-card/70 backdrop-blur-sm rounded-2xl border border-border/40 p-6 mt-8"
                                     >
                                         <h2 className="text-lg font-semibold text-foreground mb-4">Required Documents</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Ensure currentApp has a numerical ID property returned from Java */}
-                                            <DocumentUploader applicationId={currentApp.id} documentType="AADHAAR" label="Aadhaar Card" />
-                                            <DocumentUploader applicationId={currentApp.id} documentType="PAN" label="PAN Card" />
-                                            <DocumentUploader applicationId={currentApp.id} documentType="BANK_STATEMENT" label="6 Months Bank Statement" />
+                                            <DocumentUploader applicationId={currentApp.id} documentType="AADHAAR" label="Aadhaar Card" onUploadSuccess={fetchUserDashboard} />
+                                            <DocumentUploader applicationId={currentApp.id} documentType="PAN" label="PAN Card" onUploadSuccess={fetchUserDashboard} />
+                                            <DocumentUploader applicationId={currentApp.id} documentType="BANK_STATEMENT" label="6 Months Bank Statement" onUploadSuccess={fetchUserDashboard} />
                                         </div>
                                     </motion.div>
                                 )}
@@ -320,7 +360,7 @@ const Dashboard = () => {
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ type: "spring", ...springConfig, delay: 0.5 }}
+                                    transition={{ type: "spring", ...springConfig, delay: 0.3 }}
                                     className="mt-8 bg-muted/40 backdrop-blur-sm p-6 rounded-2xl border border-border/30 text-center"
                                 >
                                     <h3 className="font-medium text-foreground mb-2">Need Help?</h3>

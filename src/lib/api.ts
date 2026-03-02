@@ -120,4 +120,26 @@ export const PrymeAPI = {
 
         return res.json(); // Returns LoanDocumentDto
     },
+
+    // --- ADMIN DOCUMENT VERIFICATION ---
+    verifyDocument: async (documentId: number, status: "VERIFIED" | "REJECTED", remarks?: string) => {
+        // Construct the query parameters cleanly
+        const queryParams = new URLSearchParams({ status });
+        if (remarks) {
+            queryParams.append("remarks", remarks);
+        }
+
+        const res = await fetch(`${API_BASE_URL}/admin/applications/documents/${documentId}/verify?${queryParams.toString()}`, {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || "Failed to verify document");
+        }
+
+        // The Java backend returns ResponseEntity.ok().build() which is empty, so we return true on success
+        return true;
+    },
 };

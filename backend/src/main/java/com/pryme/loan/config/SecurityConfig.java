@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 "/api/v1/public/**", // Ensure public loans are accessible
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/error"
                         ).permitAll()
 
                         // 2. Admin Endpoints (Explicitly require ADMIN role)
