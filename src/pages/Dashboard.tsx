@@ -349,13 +349,40 @@ const Dashboard = () => {
                                     >
                                         <h2 className="text-lg font-semibold text-foreground mb-4">Required Documents</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <DocumentUploader applicationId={currentApp.id} documentType="AADHAAR" label="Aadhaar Card" onUploadSuccess={fetchUserDashboard} />
-                                            <DocumentUploader applicationId={currentApp.id} documentType="PAN" label="PAN Card" onUploadSuccess={fetchUserDashboard} />
-                                            <DocumentUploader applicationId={currentApp.id} documentType="BANK_STATEMENT" label="6 Months Bank Statement" onUploadSuccess={fetchUserDashboard} />
+                                            {/* Changed AADHAAR to ADDRESS_PROOF */}
+                                            <DocumentUploader
+                                                applicationId={currentApp.id}
+                                                documentType="ADDRESS_PROOF"
+                                                label="Aadhaar Card"
+                                                onUploadSuccess={fetchUserDashboard}
+                                            />
+
+                                            {/* Changed PAN to IDENTITY_PROOF */}
+                                            <DocumentUploader
+                                                applicationId={currentApp.id}
+                                                documentType="IDENTITY_PROOF"
+                                                label="PAN Card"
+                                                onUploadSuccess={fetchUserDashboard}
+                                            />
+
+                                            {/* This one was already correct, but just verifying it matches the enum */}
+                                            <DocumentUploader
+                                                applicationId={currentApp.id}
+                                                documentType="BANK_STATEMENT"
+                                                label="6 Months Bank Statement"
+                                                onUploadSuccess={fetchUserDashboard}
+                                            />
+
+                                            {/* Optional: You can add an income proof based on your enum */}
+                                            <DocumentUploader
+                                                applicationId={currentApp.id}
+                                                documentType="INCOME_PROOF"
+                                                label="Latest Salary Slip"
+                                                onUploadSuccess={fetchUserDashboard}
+                                            />
                                         </div>
                                     </motion.div>
                                 )}
-
                                 {/* Help Card */}
                                 <motion.div
                                     initial={{ opacity: 0 }}

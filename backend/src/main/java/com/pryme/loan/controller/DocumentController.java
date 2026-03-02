@@ -73,4 +73,32 @@ public class DocumentController {
                 doc.getUploadedAt()
         );
     }
+
+    @GetMapping("/{documentId}/download")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable Long documentId) {
+        // FIXED: Changed loanDocumentRepository to documentRepository to match your injected field
+        LoanDocument document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+
+        try {
+            java.nio.file.Path filePath = java.nio.file.Paths.get(document.getFilePath());
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
+
+            if (resource.exists() || resource.isReadable()) {
+                String contentType = java.nio.file.Files.probeContentType(filePath);
+                if (contentType == null) {
+                    contentType = "application/octet-stream";
+                }
+
+                return org.springframework.http.ResponseEntity.ok()
+                        .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                        .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + document.getFileName() + "\"")
+                        .body(resource);
+            } else {
+                throw new RuntimeException("Could not read the file from disk!");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error downloading file: " + e.getMessage());
+        }
+    }
 }

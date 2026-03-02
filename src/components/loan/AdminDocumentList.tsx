@@ -1,6 +1,6 @@
 // src/components/admin/AdminDocumentList.tsx
 import { useState } from "react";
-import { CheckCircle, XCircle, FileText } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ interface AdminDocumentListProps {
 const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
     const [remarks, setRemarks] = useState<{ [key: number]: string }>({});
     const [isProcessing, setIsProcessing] = useState<number | null>(null);
+    const [isViewing, setIsViewing] = useState<number | null>(null); // Track viewing state
 
     const handleVerify = async (documentId: number, status: "VERIFIED" | "REJECTED") => {
         setIsProcessing(documentId);
@@ -27,7 +28,7 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                 variant: status === "REJECTED" ? "destructive" : "default"
             });
 
-            onUpdate(); // Refresh the application data to show updated status
+            onUpdate(); // Refresh the application data
         } catch (error: any) {
             toast({
                 title: "Verification Failed",
@@ -36,6 +37,22 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
             });
         } finally {
             setIsProcessing(null);
+        }
+    };
+
+    // Securely view the document
+    const handleViewDocument = async (documentId: number) => {
+        setIsViewing(documentId);
+        try {
+            await PrymeAPI.viewDocument(documentId);
+        } catch (error: any) {
+            toast({
+                title: "Failed to open document",
+                description: error.message,
+                variant: "destructive"
+            });
+        } finally {
+            setIsViewing(null);
         }
     };
 
@@ -72,34 +89,52 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                     </div>
 
                     {/* Action Area */}
-                    {doc.status === 'PENDING' && (
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                            <Input
-                                placeholder="Optional remarks (e.g., blurry)"
-                                className="h-9 text-sm"
-                                value={remarks[doc.id] || ""}
-                                onChange={(e) => setRemarks({...remarks, [doc.id]: e.target.value})}
-                            />
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-success text-success hover:bg-success/10"
-                                onClick={() => handleVerify(doc.id, "VERIFIED")}
-                                disabled={isProcessing === doc.id}
-                            >
-                                <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-destructive text-destructive hover:bg-destructive/10"
-                                onClick={() => handleVerify(doc.id, "REJECTED")}
-                                disabled={isProcessing === doc.id}
-                            >
-                                <XCircle className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+
+                        {/* NEW: View Document Button (Always visible) */}
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleViewDocument(doc.id)}
+                            disabled={isViewing === doc.id}
+                            title="View Document"
+                        >
+                            {isViewing === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                            <span className="ml-2 hidden sm:inline">View</span>
+                        </Button>
+
+                        {/* Approval/Rejection Controls (Only visible if PENDING) */}
+                        {doc.status === 'PENDING' && (
+                            <>
+                                <Input
+                                    placeholder="Optional remarks..."
+                                    className="h-9 text-sm w-32 md:w-48"
+                                    value={remarks[doc.id] || ""}
+                                    onChange={(e) => setRemarks({...remarks, [doc.id]: e.target.value})}
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-success text-success hover:bg-success/10"
+                                    onClick={() => handleVerify(doc.id, "VERIFIED")}
+                                    disabled={isProcessing === doc.id}
+                                    title="Approve"
+                                >
+                                    <CheckCircle className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-destructive text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleVerify(doc.id, "REJECTED")}
+                                    disabled={isProcessing === doc.id}
+                                    title="Reject"
+                                >
+                                    <XCircle className="w-4 h-4" />
+                                </Button>
+                            </>
+                        )}
+                    </div>
 
                     {doc.status !== 'PENDING' && doc.adminRemarks && (
                         <div className="text-sm text-muted-foreground italic bg-muted/30 p-2 rounded-md mt-2 md:mt-0">

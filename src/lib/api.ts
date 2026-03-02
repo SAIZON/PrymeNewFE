@@ -121,6 +121,28 @@ export const PrymeAPI = {
         return res.json(); // Returns LoanDocumentDto
     },
 
+    viewDocument: async (documentId: number) => {
+        const res = await fetch(`${API_BASE_URL}/documents/${documentId}/download`, {
+            method: "GET",
+            headers: getAuthHeaders(),
+        });
+
+        if (!res.ok) {
+            throw new Error("Could not load the document. It may have been moved or deleted.");
+        }
+
+        // Convert the secure response into a file blob
+        const blob = await res.blob();
+
+        // Create a secure temporary URL for the browser to open
+        const url = window.URL.createObjectURL(blob);
+
+        // Open in a new tab
+        window.open(url, "_blank");
+
+        // Clean up the memory after 1 second
+        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    },
     // --- ADMIN DOCUMENT VERIFICATION ---
     verifyDocument: async (documentId: number, status: "VERIFIED" | "REJECTED", remarks?: string) => {
         // Construct the query parameters cleanly
