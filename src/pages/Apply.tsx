@@ -13,9 +13,11 @@ import RequiredDocuments from "@/components/loan/RequiredDocuments";
 import BankerContact from "@/components/loan/BankerContact";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { PrymeAPI } from "@/lib/api"; // 🧠 160 IQ: Integrated Java Backend API
 
 const Apply = () => {
+    const navigate = useNavigate();
   const [loanAmount, setLoanAmount] = useState(500000);
   const [tenure, setTenure] = useState(5);
   const [showComparison, setShowComparison] = useState(false);
@@ -113,34 +115,60 @@ const Apply = () => {
   };
 
   // 🧠 160 IQ Move: Full Async Integration with Java CRM
-  const handleApplyWithPyrme = async (bankId: string) => {
-    const bank = bankOffers.find(b => b.id === bankId);
-    if (!applicationData) return;
+    const handleApplyWithPyrme = async (bankId: string) => {
+        const bank = bankOffers.find(b => b.id === bankId);
+        if (!applicationData) return;
 
-    setIsSubmitting(true);
-    try {
-      // Execute live submission to Java Spring Boot /api/v1/apply
-      const response = await PrymeAPI.submitApplication(
-        applicationData.productType,
-        loanAmount,
-        applicationData.cibilScore
-      );
+        // 1. Auth Gateway: Backend requires a Principal (logged-in user)
+        const token = localStorage.getItem("pryme_token");
+        if (!token) {
+            toast({
+                title: "Login Required",
+                description: "Please log in or create an account to securely submit your application.",
+            });
+            navigate("/auth");
+            return;
+        }
 
-      toast({
-        title: "Application Submitted! 🎉",
-        description: `Your Lead ID: ${response.applicationId}. A PRYME Relationship Manager for ${bank?.bankName} will contact you shortly.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Submission Error",
-        description: "Unable to reach the secure application server. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        setIsSubmitting(true);
+        try {
+            // 2. Data Alignment: Convert tenure (years) to tenureMonths for Java
+            const tenureMonths = tenure * 12;
 
+            const responseMessage = await PrymeAPI.submitApplication(
+                applicationData.productType,
+                loanAmount,
+                tenureMonths
+            );
+
+            // 3. Success Handling: Show the raw string message returned from Java
+            toast({
+                title: "Application Submitted! 🎉",
+                description: responseMessage || `A PRYME RM for ${bank?.bankName} will contact you shortly.`,
+            });
+
+            // Optional: Automatically redirect them to their dashboard to see the new status
+            setTimeout(() => navigate("/dashboard"), 2000);
+
+        } catch (error: any) {
+            if (error.message === "UNAUTHORIZED") {
+                toast({
+                    title: "Session Expired",
+                    description: "Please log in again to submit your application.",
+                    variant: "destructive",
+                });
+                navigate("/auth");
+            } else {
+                toast({
+                    title: "Submission Error",
+                    description: "Unable to reach the secure application server. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
   const calculateEligibilityScore = () => {
     if (!applicationData) return 70;
     let score = 0;

@@ -41,14 +41,23 @@ export const PrymeAPI = {
   // 2. CRM Module (Admin)
 
   // 3. Lead Generation (Public)
-  submitApplication: async (loanType: string, requestedAmount: number, cibilScore: number) => {
-    const res = await fetch(`${API_BASE_URL}/apply`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ loanType, requestedAmount, cibilScore }),
-    });
-    return res.json();
-  },
+    submitApplication: async (loanType: string, amount: number, tenureMonths: number) => {
+        const res = await fetch(`${API_BASE_URL}/dashboard/apply`, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            // Matches ApplicationRequest.java exactly
+            body: JSON.stringify({ loanType, amount, tenureMonths }),
+        });
+
+        if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+                throw new Error("UNAUTHORIZED");
+            }
+            throw new Error("Failed to submit application");
+        }
+        return res.text();
+    },
+
 
     getDashboardStats: async () => {
         const res = await fetch(`${API_BASE_URL}/dashboard/stats`, {
@@ -82,5 +91,33 @@ export const PrymeAPI = {
         });
         if (!res.ok) throw new Error("Failed to update status");
         return res.json();
+    },
+
+    // --- DOCUMENT MODULE ---
+    uploadDocument: async (file: File, applicationId: number, documentType: string) => {
+        const token = localStorage.getItem("pryme_token");
+
+        // We use FormData to construct the multipart payload
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("applicationId", applicationId.toString());
+        formData.append("type", documentType); // e.g., "AADHAAR", "PAN", "SALARY_SLIP"
+
+        const res = await fetch(`${API_BASE_URL}/documents/upload`, {
+            method: "POST",
+            headers: {
+                // 🚨 CRITICAL: Do NOT set "Content-Type" here!
+                // The browser will automatically set it to 'multipart/form-data; boundary=...'
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            },
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || "Failed to upload document");
+        }
+
+        return res.json(); // Returns LoanDocumentDto
     },
 };

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { PrymeAPI } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import DocumentUploader from "@/components/loan/DocumentUploader.tsx";
 
 const springConfig = { stiffness: 120, damping: 28, mass: 0.8 };
 
@@ -295,6 +296,22 @@ const Dashboard = () => {
                                                     </div>
                                                 );
                                             })}
+                                        </div>
+                                    </motion.div>
+                                )}
+                                {/* Inside Dashboard.tsx, right below the Timeline section */}
+                                {currentApp && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="bg-card/70 backdrop-blur-sm rounded-2xl border border-border/40 p-6 mt-8"
+                                    >
+                                        <h2 className="text-lg font-semibold text-foreground mb-4">Required Documents</h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {/* Ensure currentApp has a numerical ID property returned from Java */}
+                                            <DocumentUploader applicationId={currentApp.id} documentType="AADHAAR" label="Aadhaar Card" />
+                                            <DocumentUploader applicationId={currentApp.id} documentType="PAN" label="PAN Card" />
+                                            <DocumentUploader applicationId={currentApp.id} documentType="BANK_STATEMENT" label="6 Months Bank Statement" />
                                         </div>
                                     </motion.div>
                                 )}
