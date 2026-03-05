@@ -2,12 +2,14 @@ package com.pryme.loan.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List; // <-- Add this
 
 public record ApplicationDto(
-        Long id,          // Changed UUID to Long to match Entity
+        Long id,
         String loanType,
-        String bankName,  // <--- NEW FIELD
+        String bankName,
         BigDecimal amount,
         String status,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<LoanDocumentDto> documents // <--- NEW: Tells React which files exist!
 ) {}

@@ -39,6 +39,9 @@ public class Application {
         updatedAt = LocalDateTime.now();
     }
 
+    @OneToMany(mappedBy = "application", cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    private java.util.List<LoanDocument> documents;
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

@@ -1,4 +1,3 @@
-// src/components/loan/DocumentUploader.tsx
 import { useState } from "react";
 import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,18 +8,17 @@ interface DocumentUploaderProps {
     applicationId: number;
     documentType: string;
     label: string;
+    existingDoc?: any; // <-- NEW: Takes the document from Java
     onUploadSuccess?: () => void;
 }
 
-const DocumentUploader = ({ applicationId, documentType, label, onUploadSuccess }: DocumentUploaderProps) => {
+const DocumentUploader = ({ applicationId, documentType, label, existingDoc, onUploadSuccess }: DocumentUploaderProps) => {
     const [isUploading, setIsUploading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Frontend validation matching Spring Boot's 5MB limit
         if (file.size > 5 * 1024 * 1024) {
             toast({ title: "File too large", description: "Must be less than 5MB", variant: "destructive" });
             return;
@@ -29,18 +27,19 @@ const DocumentUploader = ({ applicationId, documentType, label, onUploadSuccess 
         setIsUploading(true);
         try {
             await PrymeAPI.uploadDocument(file, applicationId, documentType);
-
-            setIsSuccess(true);
             toast({ title: "Upload Successful", description: `${label} has been securely uploaded.` });
-
-            if (onUploadSuccess) onUploadSuccess();
-
+            if (onUploadSuccess) onUploadSuccess(); // Refreshes the dashboard automatically!
         } catch (error: any) {
             toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
         } finally {
             setIsUploading(false);
         }
     };
+
+    // Smart States based on backend data
+    const isUploaded = !!existingDoc;
+    const isVerified = existingDoc?.status === "VERIFIED";
+    const isRejected = existingDoc?.status === "REJECTED";
 
     return (
         <div className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-card/50">
@@ -50,15 +49,24 @@ const DocumentUploader = ({ applicationId, documentType, label, onUploadSuccess 
                 </div>
                 <div>
                     <p className="font-medium text-foreground">{label}</p>
-                    <p className="text-xs text-muted-foreground">PDF, JPG or PNG (Max 5MB)</p>
+                    {isRejected ? (
+                        <p className="text-xs text-destructive">Rejected: {existingDoc.adminRemarks || "Please re-upload clear image"}</p>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">PDF, JPG or PNG (Max 5MB)</p>
+                    )}
                 </div>
             </div>
 
             <div>
-                {isSuccess ? (
+                {isVerified ? (
                     <div className="flex items-center gap-2 text-success">
                         <CheckCircle className="w-5 h-5" />
-                        <span className="text-sm font-medium">Uploaded</span>
+                        <span className="text-sm font-medium">Verified</span>
+                    </div>
+                ) : isUploaded && !isRejected ? (
+                    <div className="flex items-center gap-2 text-trust">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="text-sm font-medium">Pending Review</span>
                     </div>
                 ) : (
                     <div className="relative">
@@ -69,13 +77,13 @@ const DocumentUploader = ({ applicationId, documentType, label, onUploadSuccess 
                             onChange={handleFileChange}
                             disabled={isUploading}
                         />
-                        <Button variant="outline" size="sm" disabled={isUploading} className="pointer-events-none">
+                        <Button variant={isRejected ? "destructive" : "outline"} size="sm" disabled={isUploading} className="pointer-events-none">
                             {isUploading ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                                 <>
                                     <Upload className="w-4 h-4 mr-2" />
-                                    Upload
+                                    {isRejected ? "Re-upload" : "Upload"}
                                 </>
                             )}
                         </Button>

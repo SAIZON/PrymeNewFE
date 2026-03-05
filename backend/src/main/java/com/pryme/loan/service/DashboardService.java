@@ -44,14 +44,7 @@ public class DashboardService {
     public List<ApplicationDto> getUserApplications(String email) {
         User user = getUser(email);
         return applicationRepository.findByUserId(user.getId()).stream()
-                .map(app -> new ApplicationDto(
-                        app.getId(),
-                        app.getLoanType(),
-                        app.getBankName() != null ? app.getBankName() : "Pryme Partner",
-                        app.getAmount(),
-                        app.getStatus().name(),
-                        app.getCreatedAt()
-                ))
+                .map(this::mapToApplicationDto) // Use the new helper method
                 .collect(Collectors.toList());
     }
 
@@ -66,17 +59,37 @@ public class DashboardService {
             throw new RuntimeException("Access Denied: You cannot view this application.");
         }
 
+        return mapToApplicationDto(app); // Use the new helper method
+    }
+
+
+
+    private ApplicationDto mapToApplicationDto(Application app) {
+        // 1. Map the documents list
+        List<com.pryme.loan.dto.LoanDocumentDto> documentDtos = app.getDocuments() != null ?
+                app.getDocuments().stream()
+                        .map(doc -> new com.pryme.loan.dto.LoanDocumentDto(
+                                doc.getId(),
+                                doc.getFileName(),
+                                doc.getType() != null ? doc.getType().name() : "OTHER",
+                                doc.getStatus() != null ? doc.getStatus().name() : "PENDING",
+                                doc.getUploadedAt()
+                        ))
+                        .collect(Collectors.toList())
+                : java.util.List.of();
+
+        // 2. Return the DTO with exactly 7 arguments
         return new ApplicationDto(
                 app.getId(),
                 app.getLoanType(),
                 app.getBankName() != null ? app.getBankName() : "Pryme Partner",
-//                app.getProductName(), // Ensure this field exists in DTO or remove if not needed
                 app.getAmount(),
-//                app.getTenureMonths(), // Ensure this is in DTO
-                app.getStatus().name(),
-                app.getCreatedAt()
+                app.getStatus() != null ? app.getStatus().name() : "PENDING",
+                app.getCreatedAt(),
+                documentDtos // <-- The required 7th argument!
         );
     }
+
 
     @Transactional
     public void submitApplication(String email, ApplicationRequest request) {

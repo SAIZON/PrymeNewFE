@@ -349,35 +349,25 @@ const Dashboard = () => {
                                     >
                                         <h2 className="text-lg font-semibold text-foreground mb-4">Required Documents</h2>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Changed AADHAAR to ADDRESS_PROOF */}
                                             <DocumentUploader
                                                 applicationId={currentApp.id}
                                                 documentType="ADDRESS_PROOF"
                                                 label="Aadhaar Card"
+                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "ADDRESS_PROOF")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
-
-                                            {/* Changed PAN to IDENTITY_PROOF */}
                                             <DocumentUploader
                                                 applicationId={currentApp.id}
                                                 documentType="IDENTITY_PROOF"
                                                 label="PAN Card"
+                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "IDENTITY_PROOF")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
-
-                                            {/* This one was already correct, but just verifying it matches the enum */}
                                             <DocumentUploader
                                                 applicationId={currentApp.id}
                                                 documentType="BANK_STATEMENT"
                                                 label="6 Months Bank Statement"
-                                                onUploadSuccess={fetchUserDashboard}
-                                            />
-
-                                            {/* Optional: You can add an income proof based on your enum */}
-                                            <DocumentUploader
-                                                applicationId={currentApp.id}
-                                                documentType="INCOME_PROOF"
-                                                label="Latest Salary Slip"
+                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "BANK_STATEMENT")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
                                         </div>
