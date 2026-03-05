@@ -148,4 +148,21 @@ export const PrymeAPI = {
         if (!res.ok) throw new Error("Failed to verify document");
         return true;
     },
+
+    // --- LEADS & CONTACT ---
+    submitLead: async (data: { name: string; email: string; mobile: string; loanType: string; message: string }) => {
+        const res = await fetch(`${API_BASE_URL}/public/leads`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!res.ok) {
+            throw new Error("Failed to send message. Please try again later.");
+        }
+
+        return res.json();
+    },
 };

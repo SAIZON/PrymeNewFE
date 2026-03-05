@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -55,7 +56,7 @@ const App = () => (
                   </AdminProtectedRoute>
                 } 
               />
-              
+                <Route path="/contact" element={<Contact />} />
               {/* 404 Catch-All */}
               <Route path="*" element={<NotFound />} />
             </Routes>
