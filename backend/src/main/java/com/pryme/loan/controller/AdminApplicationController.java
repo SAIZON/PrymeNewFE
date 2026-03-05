@@ -79,7 +79,7 @@ public class AdminApplicationController {
 
     @PatchMapping("/documents/{documentId}/verify")
     public ResponseEntity<Void> verifyDocument(
-            @PathVariable Long documentId,
+            @PathVariable java.util.UUID documentId,
             @RequestParam DocumentStatus status,
             @RequestParam(required = false) String remarks) {
 

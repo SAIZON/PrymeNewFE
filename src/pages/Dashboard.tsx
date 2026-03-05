@@ -353,21 +353,24 @@ const Dashboard = () => {
                                                 applicationId={currentApp.id}
                                                 documentType="ADDRESS_PROOF"
                                                 label="Aadhaar Card"
-                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "ADDRESS_PROOF")}
+                                                // CHANGED: d.type to d.category to match Java DTO
+                                                existingDoc={currentApp.documents?.find((d: any) => d.category === "ADDRESS_PROOF")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
                                             <DocumentUploader
                                                 applicationId={currentApp.id}
                                                 documentType="IDENTITY_PROOF"
                                                 label="PAN Card"
-                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "IDENTITY_PROOF")}
+                                                // CHANGED: d.type to d.category to match Java DTO
+                                                existingDoc={currentApp.documents?.find((d: any) => d.category === "IDENTITY_PROOF")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
                                             <DocumentUploader
                                                 applicationId={currentApp.id}
                                                 documentType="BANK_STATEMENT"
                                                 label="6 Months Bank Statement"
-                                                existingDoc={currentApp.documents?.find((d: any) => d.type === "BANK_STATEMENT")}
+                                                // CHANGED: d.type to d.category to match Java DTO
+                                                existingDoc={currentApp.documents?.find((d: any) => d.category === "BANK_STATEMENT")}
                                                 onUploadSuccess={fetchUserDashboard}
                                             />
                                         </div>

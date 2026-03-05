@@ -15,7 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import  java.util.UUID;
 import java.security.Principal;
 
 @RestController
@@ -75,10 +75,9 @@ public class DocumentController {
     }
 
     @GetMapping("/{documentId}/download")
-    public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable Long documentId) {
-        // FIXED: Changed loanDocumentRepository to documentRepository to match your injected field
+    public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable java.util.UUID documentId) { // <-- CHANGED TO UUID
         LoanDocument document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+                .orElseThrow(() -> new RuntimeException("Document not found"));
 
         try {
             java.nio.file.Path filePath = java.nio.file.Paths.get(document.getFilePath());
@@ -86,9 +85,7 @@ public class DocumentController {
 
             if (resource.exists() || resource.isReadable()) {
                 String contentType = java.nio.file.Files.probeContentType(filePath);
-                if (contentType == null) {
-                    contentType = "application/octet-stream";
-                }
+                if (contentType == null) contentType = "application/octet-stream";
 
                 return org.springframework.http.ResponseEntity.ok()
                         .contentType(org.springframework.http.MediaType.parseMediaType(contentType))

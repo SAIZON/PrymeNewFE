@@ -1,5 +1,6 @@
 package com.pryme.loan.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ public class Application {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     // --- NEW FIELDS ---
@@ -39,7 +41,7 @@ public class Application {
         updatedAt = LocalDateTime.now();
     }
 
-    @OneToMany(mappedBy = "application", cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.LAZY)
+    @OneToMany(mappedBy = "application", cascade = jakarta.persistence.CascadeType.ALL, fetch = jakarta.persistence.FetchType.EAGER)
     private java.util.List<LoanDocument> documents;
 
     @PreUpdate

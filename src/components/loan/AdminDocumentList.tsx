@@ -1,4 +1,3 @@
-// src/components/admin/AdminDocumentList.tsx
 import { useState } from "react";
 import { CheckCircle, XCircle, FileText, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,11 @@ interface AdminDocumentListProps {
 }
 
 const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
-    const [remarks, setRemarks] = useState<{ [key: number]: string }>({});
-    const [isProcessing, setIsProcessing] = useState<number | null>(null);
-    const [isViewing, setIsViewing] = useState<number | null>(null); // Track viewing state
+    const [remarks, setRemarks] = useState<{ [key: string]: string }>({}); // Track by string UUID
+    const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const [isViewing, setIsViewing] = useState<string | null>(null);
 
-    const handleVerify = async (documentId: number, status: "VERIFIED" | "REJECTED") => {
+    const handleVerify = async (documentId: string, status: "VERIFIED" | "REJECTED") => {
         setIsProcessing(documentId);
         try {
             const note = remarks[documentId];
@@ -27,30 +26,20 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                 description: `The document has been successfully marked as ${status.toLowerCase()}.`,
                 variant: status === "REJECTED" ? "destructive" : "default"
             });
-
-            onUpdate(); // Refresh the application data
+            onUpdate();
         } catch (error: any) {
-            toast({
-                title: "Verification Failed",
-                description: error.message,
-                variant: "destructive"
-            });
+            toast({ title: "Verification Failed", description: error.message, variant: "destructive" });
         } finally {
             setIsProcessing(null);
         }
     };
 
-    // Securely view the document
-    const handleViewDocument = async (documentId: number) => {
+    const handleViewDocument = async (documentId: string) => {
         setIsViewing(documentId);
         try {
             await PrymeAPI.viewDocument(documentId);
         } catch (error: any) {
-            toast({
-                title: "Failed to open document",
-                description: error.message,
-                variant: "destructive"
-            });
+            toast({ title: "Failed to open document", description: error.message, variant: "destructive" });
         } finally {
             setIsViewing(null);
         }
@@ -70,6 +59,7 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                             <FileText className="w-5 h-5 text-primary" />
                         </div>
                         <div>
+                            {/* CHANGED: display doc.category since doc.type no longer exists */}
                             <p className="font-medium text-foreground">{doc.name || doc.type || "Document"}</p>
                             <div className="flex items-center gap-2 mt-1">
                 <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
@@ -88,22 +78,17 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                         </div>
                     </div>
 
-                    {/* Action Area */}
                     <div className="flex items-center gap-2 w-full md:w-auto">
-
-                        {/* NEW: View Document Button (Always visible) */}
                         <Button
                             size="sm"
                             variant="secondary"
                             onClick={() => handleViewDocument(doc.id)}
                             disabled={isViewing === doc.id}
-                            title="View Document"
                         >
                             {isViewing === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                             <span className="ml-2 hidden sm:inline">View</span>
                         </Button>
 
-                        {/* Approval/Rejection Controls (Only visible if PENDING) */}
                         {doc.status === 'PENDING' && (
                             <>
                                 <Input
@@ -118,7 +103,6 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                                     className="border-success text-success hover:bg-success/10"
                                     onClick={() => handleVerify(doc.id, "VERIFIED")}
                                     disabled={isProcessing === doc.id}
-                                    title="Approve"
                                 >
                                     <CheckCircle className="w-4 h-4" />
                                 </Button>
@@ -128,19 +112,12 @@ const AdminDocumentList = ({ documents, onUpdate }: AdminDocumentListProps) => {
                                     className="border-destructive text-destructive hover:bg-destructive/10"
                                     onClick={() => handleVerify(doc.id, "REJECTED")}
                                     disabled={isProcessing === doc.id}
-                                    title="Reject"
                                 >
                                     <XCircle className="w-4 h-4" />
                                 </Button>
                             </>
                         )}
                     </div>
-
-                    {doc.status !== 'PENDING' && doc.adminRemarks && (
-                        <div className="text-sm text-muted-foreground italic bg-muted/30 p-2 rounded-md mt-2 md:mt-0">
-                            Note: {doc.adminRemarks}
-                        </div>
-                    )}
                 </div>
             ))}
         </div>
